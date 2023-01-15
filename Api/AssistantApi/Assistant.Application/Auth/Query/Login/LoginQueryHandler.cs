@@ -13,7 +13,9 @@ namespace Assistant.Application.Auth.Query.Login
 
         public async Task<string> Handle(LoginQuery loginQuery, CancellationToken cancellationToken)
         {
-            return string.Empty;
+            await Task.Delay(0);
+
+            return $"Логин: {loginQuery.Login}, пароль: {loginQuery.Password}";
         }
     }
 }
