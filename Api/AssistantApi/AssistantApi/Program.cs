@@ -1,127 +1,145 @@
 using Assistant.Application;
-using Assistant.Domain;
-using Assistant.Domain.Entities;
+using Assistant.Application.Common.Interfaces;
 using Assistant.Domain.Models;
 using Assistant.Infrastructure;
-using AssistantApi;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text;
 
-var people = new List<User>
+namespace AssistantApi;
+
+public class Program
 {
-    new User()
+    private static ConfigurationManager _configuration;
+
+    public static void Main(string[] args)
     {
-        Login = "user1",
-        Password= "password",
-    },
-    new User()
+        var builder = WebApplication.CreateBuilder(args);
+        BuildConfiguration(builder.Configuration);
+        ConfigureServices(builder.Services);
+
+        var app = builder.Build();
+        ConfigureApplication(app);
+
+        MigrateDatabase(app);
+
+        app.Run();
+    }
+
+    private static void MigrateDatabase(WebApplication app)
     {
-        Login = "user2",
-        Password= "password",
-    },
-};
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddControllers();
-
-builder.Services.AddDomain(builder.Configuration);
-builder.Services.AddApplication(builder.Configuration);
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddConfigureSettings(builder.Configuration);
-
-builder.Services.AddAuthorization();
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+        using (var scope = app.Services.CreateScope())
         {
-            // указывает, будет ли валидироваться издатель при валидации токена
-            ValidateIssuer = true,
-            // строка, представляющая издателя
-            ValidIssuer = "MyAuthServer",
-            // будет ли валидироваться потребитель токена
-            ValidateAudience = true,
-            // установка потребителя токена
-            ValidAudience = "MyAuthServer",
-            //будет ли валидироваться время существования
-            ValidateLifetime = true,
-            // установка ключа безопасности
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(
-                builder.Configuration.GetSection(SecuritySettings.Path).Get<SecuritySettings>().JWTSecretKey)),
-            // валидация ключа безопасности
-            ValidateIssuerSigningKey = true,
-        };
-    });
+            var services = scope.ServiceProvider;
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    var securityDefinition = new OpenApiSecurityScheme()
-    {
-        Name = "Bearer",
-        BearerFormat = "JWT",
-        Scheme = "bearer",
-        Description = "Specify the authorization token.",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-    };
-    c.AddSecurityDefinition("jwt_auth", securityDefinition);
+            var factory = services.GetRequiredService<IDatabaseContextFactory>();
 
-    // Make sure swagger UI requires a Bearer token specified
-    var securityScheme = new OpenApiSecurityScheme()
-    {
-        Reference = new OpenApiReference()
-        {
-            Id = "jwt_auth",
-            Type = ReferenceType.SecurityScheme
+            var context = factory.CreateContext();
+
+            context.Database.Migrate();
         }
-    };
-    var securityRequirements = new OpenApiSecurityRequirement()
+    }
+
+    private static void ConfigureApplication(WebApplication app)
     {
-        {securityScheme, Array.Empty<string>()},
-    };
-    c.AddSecurityRequirement(securityRequirements);
-});
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
 
-var app = builder.Build();
+        app.UseAuthentication();
+        app.UseAuthorization();
 
-app.UseAuthentication();
-app.UseAuthorization();
+        app.UseRouting();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+        app.MapControllers();
+    }
+
+    private static void ConfigureServices(IServiceCollection services)
+    {
+        services.AddControllers();
+
+        services.AddApplication();
+        services.AddConfigureSettings(_configuration);
+        services.AddInfrastructure(_configuration);
+        services.AddOptions();
+
+        services.AddAuthorization();
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    // указывает, будет ли валидироваться издатель при валидации токена
+                    ValidateIssuer = true,
+                    // строка, представляющая издателя
+                    ValidIssuer = "MyAuthServer",
+                    // будет ли валидироваться потребитель токена
+                    ValidateAudience = true,
+                    // установка потребителя токена
+                    ValidAudience = "MyAuthServer",
+                    //будет ли валидироваться время существования
+                    ValidateLifetime = true,
+                    // установка ключа безопасности
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(
+                        _configuration.GetSection(SecuritySettings.Path).Get<SecuritySettings>().JWTSecretKey)),
+                    // валидация ключа безопасности
+                    ValidateIssuerSigningKey = true,
+                };
+            });
+
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(c =>
+        {
+            var securityDefinition = new OpenApiSecurityScheme()
+            {
+                Name = "Bearer",
+                BearerFormat = "JWT",
+                Scheme = "bearer",
+                Description = "Specify the authorization token.",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.Http,
+            };
+            c.AddSecurityDefinition("jwt_auth", securityDefinition);
+
+            // Make sure swagger UI requires a Bearer token specified
+            var securityScheme = new OpenApiSecurityScheme()
+            {
+                Reference = new OpenApiReference()
+                {
+                    Id = "jwt_auth",
+                    Type = ReferenceType.SecurityScheme
+                }
+            };
+            var securityRequirements = new OpenApiSecurityRequirement()
+            {
+                {securityScheme, Array.Empty<string>()},
+            };
+                    c.AddSecurityRequirement(securityRequirements);
+         });
+    }
+
+    private static void BuildConfiguration(ConfigurationManager configuration)
+    {
+        configuration
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile
+            (
+                "appsettings.json",
+                optional: false,
+                reloadOnChange: true
+            )
+            .AddJsonFile
+            (
+                $"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json",
+                optional: true,
+                reloadOnChange: true
+        )
+        .Build();
+
+        _configuration = configuration;
+    }
 }
-
-#region удалить
-app.Map("/login/{username}", (string username) =>
-{
-    var claims = new List<Claim> { new Claim(ClaimTypes.Name, username) };
-    // создаем JWT-токен
-    var jwt = new JwtSecurityToken(
-            issuer: "MyAuthServer",
-            audience: "MyAuthClient",
-            claims: claims,
-            expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(2)),
-            signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(
-                builder.Configuration.GetSection(SecuritySettings.Path).Get<SecuritySettings>().JWTSecretKey)), SecurityAlgorithms.HmacSha256));
-
-    return new JwtSecurityTokenHandler().WriteToken(jwt);
-});
-
-app.Map("/data", [Authorize] () => new { message = "Hello World!" });
-
-#endregion
-
-app.UseRouting();
-
-app.MapControllers();
-
-app.Run();
