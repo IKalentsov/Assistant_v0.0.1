@@ -16,11 +16,21 @@ namespace Assistant.Infrastructure.Persistence.Configurations
         {
             entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
 
-            entity.Property(e => e.Login).IsRequired();
+            entity.Property(e => e.Email).IsRequired();
 
             entity.Property(e => e.Password).IsRequired();
 
-            entity.Property(e => e.Email).IsRequired();
+            entity.Property(e => e.Salt).IsRequired();
+
+            entity.Property(e => e.FirstName).IsRequired();
+
+            entity.Property(e => e.LastName).IsRequired();
+
+            entity.Property(e => e.Login).IsRequired();
+
+            entity.Property(e => e.ProfileImage).IsRequired();
+
+            entity.Property(e => e.Right).IsRequired();
         }
     }
 }
