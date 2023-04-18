@@ -12,8 +12,16 @@ namespace AssistantApi.Controllers
         public AuthController(IMediator mediator)
             : base(mediator) { }
 
-        [HttpPost("login")]
+        [HttpPost("register")]
         public async Task<IActionResult> Login(LoginQuery query, CancellationToken cancellationToken)
+        {
+            var dto = await Mediator.Send(query, cancellationToken);
+
+            return Ok(dto);
+        }
+
+        [HttpPost("create")]
+        public async Task<IActionResult> Create(LoginQuery query, CancellationToken cancellationToken)
         {
             var dto = await Mediator.Send(query, cancellationToken);
 

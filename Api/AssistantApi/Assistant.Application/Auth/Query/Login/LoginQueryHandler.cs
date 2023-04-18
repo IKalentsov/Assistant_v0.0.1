@@ -1,21 +1,37 @@
-﻿using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Assistant.Application.Common.Interfaces;
+using Assistant.Domain.Entities;
+using MediatR;
 
 namespace Assistant.Application.Auth.Query.Login
 {
-    public class LoginQueryHandler : IRequestHandler<LoginQuery, string>
+    public class LoginQueryHandler : IRequestHandler<LoginQuery, Guid>
     {
-        public LoginQueryHandler() { }
+        public LoginQueryHandler(IAuthService authService)
+        { 
+            _authService = authService;
+        }
 
-        public async Task<string> Handle(LoginQuery loginQuery, CancellationToken cancellationToken)
+        private readonly IAuthService _authService;
+
+        public async Task<Guid> Handle(LoginQuery loginQuery, CancellationToken cancellationToken)
         {
-            await Task.Delay(0);
+            var isUserNew = await _authService.CheckUserAsync(loginQuery.Email);
 
-            return $"Логин: {loginQuery.Login}, пароль: {loginQuery.Password}";
+            if (!isUserNew) throw new Exception("Пользователь с таким email уже существует");
+
+            var userId = await _authService.CreateUserAsync(
+                new User()
+                {
+                    Email = loginQuery.Email,
+                    Password = loginQuery.Password,
+                    Salt = "214313432",
+                    FirstName = loginQuery.FirstName,
+                    LastName = loginQuery.LastName,
+                    Login = loginQuery.Login,
+                    Right = 0,
+                });
+
+            return userId;
         }
     }
 }

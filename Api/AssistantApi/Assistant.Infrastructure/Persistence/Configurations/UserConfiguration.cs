@@ -28,7 +28,7 @@ namespace Assistant.Infrastructure.Persistence.Configurations
 
             entity.Property(e => e.Login).IsRequired();
 
-            entity.Property(e => e.ProfileImage).IsRequired();
+            entity.Property(e => e.ProfileImage);
 
             entity.Property(e => e.Right).IsRequired();
         }

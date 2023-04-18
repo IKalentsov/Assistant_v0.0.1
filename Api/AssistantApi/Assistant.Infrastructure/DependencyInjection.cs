@@ -24,8 +24,12 @@ namespace Assistant.Infrastructure
                 }
             );
 
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
             services.AddScoped<IDatabaseContextFactory, DatabaseContextFactory>();
             services.AddScoped<IDatabaseContext>(provider => provider.GetRequiredService<IDatabaseContextFactory>().CreateContext());
+
+            services.AddTransient<IAuthService, AuthService>();
 
             return services;
         }

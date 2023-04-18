@@ -1,14 +1,6 @@
 ﻿using Assistant.Application.Common.Interfaces;
 using Assistant.Domain.Entities;
-using Assistant.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Authentication;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Assistant.Infrastructure.Services
 {
@@ -21,51 +13,48 @@ namespace Assistant.Infrastructure.Services
             _databaseContext = databaseContext;
         }
 
-        public async Task<Guid> CreateUser(UserModel userModel, CancellationToken cancellationToken = default)
+        public async Task<Guid> CreateUserAsync(User user, CancellationToken cancellationToken = default)
         {
-            var user = new User();
-
-            user.Email = userModel.Email;
-            user.Password = userModel.Password;
-            user.Salt = userModel.Salt;
-            user.Right = userModel.Right;
-
             _databaseContext.Users.Add(user);
+
             await _databaseContext.SaveChangesAsync(cancellationToken);
 
             return user.Id;
         }
 
-        public async Task<UserModel> GetUser(string email, CancellationToken cancellationToken = default)
+        public async Task<bool> CheckUserAsync(string email)
         {
-            var user = await _databaseContext.Users.Where(u => u.Email == email).Select(user => new UserModel
-            {
-                UserId = user.Id,
-                Email = user.Email,
-                Password = user.Password,
-                Salt = user.Salt,
-                Right = user.Right
-            }).FirstOrDefaultAsync(cancellationToken);
+            var user = await _databaseContext.Users.FirstOrDefaultAsync(x => x.Email == email);
 
-            if (user is null) throw new AuthenticationException("Пользователь не найден");
-
-            return user;
+            return user is null;
         }
 
-        public async Task<UserModel> GetUser(Guid id, CancellationToken cancellationToken = default)
+        public async Task<User> GetUserAsync(string email, CancellationToken cancellationToken = default)
         {
-            var user = await _databaseContext.Users.Where(u => u.Id == id).Select(user => new UserModel
+            var user = await _databaseContext.Users.Where(u => u.Email == email).Select(user => new User
             {
-                UserId = user.Id,
+                Id = user.Id,
+                Email = user.Email,
+                Password = user.Password,
+                Salt = user.Salt,
+                Right = user.Right
+            }).FirstOrDefaultAsync(cancellationToken);
+            
+            return user ?? new User();
+        }
+
+        public async Task<User> GetUserAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var user = await _databaseContext.Users.Where(u => u.Id == id).Select(user => new User
+            {
+                Id = user.Id,
                 Email = user.Email,
                 Password = user.Password,
                 Salt = user.Salt,
                 Right = user.Right
             }).FirstOrDefaultAsync(cancellationToken);
 
-            if (user is null) throw new AuthenticationException("Пользователь не найден");
-
-            return user;
+            return user ?? new User();
         }
     }
 }
