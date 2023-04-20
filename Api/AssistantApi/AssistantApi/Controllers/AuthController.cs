@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Assistant.Application.Auth.Query.Login;
+using Assistant.Application.Auth.Commands.Login;
 
 namespace AssistantApi.Controllers
 {

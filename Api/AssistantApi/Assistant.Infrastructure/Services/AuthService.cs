@@ -1,4 +1,5 @@
-﻿using Assistant.Application.Common.Interfaces;
+﻿using Assistant.Application.Auth.Security;
+using Assistant.Application.Common.Interfaces;
 using Assistant.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,15 +7,19 @@ namespace Assistant.Infrastructure.Services
 {
     public class AuthService : IAuthService
     {
-        private readonly IDatabaseContext _databaseContext;
-
-        public AuthService(IDatabaseContext databaseContext) 
+        public AuthService(IDatabaseContext databaseContext, IEncrypt encrypt) 
         {
             _databaseContext = databaseContext;
+            _encrypt = encrypt;
         }
+
+        private readonly IDatabaseContext _databaseContext;
+        private readonly IEncrypt _encrypt;
 
         public async Task<Guid> CreateUserAsync(User user, CancellationToken cancellationToken = default)
         {
+            HashingPassword(user);
+
             _databaseContext.Users.Add(user);
 
             await _databaseContext.SaveChangesAsync(cancellationToken);
@@ -55,6 +60,12 @@ namespace Assistant.Infrastructure.Services
             }).FirstOrDefaultAsync(cancellationToken);
 
             return user ?? new User();
+        }
+    
+        private void HashingPassword(User user)
+        {
+            user.Salt = Guid.NewGuid().ToString();
+            user.Password = _encrypt.HashPassword(user.Password, user.Salt);
         }
     }
 }

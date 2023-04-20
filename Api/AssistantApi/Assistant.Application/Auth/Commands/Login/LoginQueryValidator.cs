@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace Assistant.Application.Auth.Query.Login
+namespace Assistant.Application.Auth.Commands.Login
 {
     public class LoginQueryValidator : AbstractValidator<LoginQuery>
     {

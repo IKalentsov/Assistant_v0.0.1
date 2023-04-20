@@ -1,4 +1,5 @@
-﻿using Assistant.Application.Common.Behaviours;
+﻿using Assistant.Application.Auth.Security;
+using Assistant.Application.Common.Behaviours;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,8 @@ namespace Assistant.Application
             services.AddMediatR(Assembly.GetExecutingAssembly());
 
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+            services.AddSingleton<IEncrypt, Encrypt>();
 
             return services;
         }

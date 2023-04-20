@@ -1,6 +1,6 @@
 ﻿using MediatR;
 
-namespace Assistant.Application.Auth.Query.Login
+namespace Assistant.Application.Auth.Commands.Login
 {
     public class LoginQuery : IRequest<Guid>
     {
